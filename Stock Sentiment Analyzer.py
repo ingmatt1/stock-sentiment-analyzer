@@ -13,7 +13,7 @@ from openpyxl.chart import (
 )
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.layout import Layout, ManualLayout
-from StyleFrame import StyleFrame, Styler, utils
+
 
 def sentiment(sentiment_df):
     score_list = []
