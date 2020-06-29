@@ -3,7 +3,15 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import numpy as np
-import matplotlib.pyplot as plt
+
+from openpyxl import Workbook
+from openpyxl.chart import (
+    PieChart,
+    ProjectedPieChart,
+    Reference,
+)
+from openpyxl.chart.series import DataPoint
+from openpyxl.chart.layout import Layout, ManualLayout
 
 def sentiment(sentiment_df):
     score_list = []
@@ -127,25 +135,54 @@ def daily_sentiment(df):
     return mean_scores
 
 def plot_sentiment(df):
-    # df=df.set_index('tickers').transpose()
+    tickers = []
+    for i in range(0, len(df.index)):
+        tickers.append(df.loc[i, 'tickers'])
     
-    # for col in df.columns:
-    #     print(col)
-    #     plt.pie(
-    #     df[col],
-    #     labels= df.index.values,
-    #     autopct='%1.1f%%',
-    #     )
+    df=df.T
+    
+    wb = Workbook()
+    
+    columns=list(df)
+    for i in range(0, len(df.columns)):
+        ws = wb.create_sheet(tickers[i])
+        score=1
 
-    #     plt.axis('equal')
-    #     plt.show()
+        for index, row in df.iterrows():
+            vals = []
+            if index=='tickers':
+                continue
+            
+            vals.append(df.loc[index, i])
+            vals.insert(0,df.index[score])
+            score=score+1
+            ws.append(vals)
+        
+        pie = PieChart()
+        labels = Reference(ws, min_col=1, max_col= 1, min_row=1, max_row=3)
+        
+        data = Reference(ws, min_col=2, max_col = 2, min_row=1, max_row=3)
+        pie.add_data(data)
+        
+        pie.set_categories(labels)
+        pie.title = tickers[i] + ' Sentiment'
+        pie.layout=Layout(
+        manualLayout=ManualLayout(
+        h=0.7, w=0.7,
+        )
+)
+        ws.add_chart(pie, "E3")
+        
+    
+    del wb["Sheet"]
+    wb.save("pie.xlsx")
 
 
 
 #List the tickers of the companies you'd like to analyze
-tickers=['AMZN', 'GOOG', 'MSFT']              
+tickers=['AMZN', 'MSFT']              
 plot_sentiment(tally_scores(scored_news(tickers)))
-tally_scores(scored_news(tickers))
+# print(tally_scores(scored_news(tickers)).T)
 
 # plt.plot([1, 2, 3, 4])
 # plt.ylabel('some numbers')
