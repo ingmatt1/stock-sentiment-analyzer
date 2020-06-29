@@ -1,10 +1,11 @@
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import pandas as pd
+import xlsxwriter
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import numpy as np
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.chart import (
     PieChart,
     ProjectedPieChart,
@@ -12,6 +13,7 @@ from openpyxl.chart import (
 )
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.layout import Layout, ManualLayout
+from StyleFrame import StyleFrame, Styler, utils
 
 def sentiment(sentiment_df):
     score_list = []
@@ -128,23 +130,38 @@ def tally_scores(df):
             
     return tally_df
 
-def daily_sentiment(df):
+def daily_sentiment(tickers):
+    df=scored_news(tickers)
     mean_scores = df.groupby(['ticker','date']).mean()
     #optional
     mean_scores = mean_scores.unstack()
     return mean_scores
 
-def plot_sentiment(df):
-    tickers = []
-    for i in range(0, len(df.index)):
-        tickers.append(df.loc[i, 'tickers'])
+def plot_sentiment(tickers):
+    df=scored_news(tickers)
     
-    df=df.T
+    #getrange of headlines dates and daily scores
+    dates = date_range(df)
     
-    wb = Workbook()
+    daily = daily_sentiment(tickers)
+    df=tally_scores(df).T
+    blank = []
+
     
     columns=list(df)
+    
+    path = "C:\\Users\\matth\\Desktop\\stock-sentiment-analyzer\\pie.xlsx"
+    sf=StyleFrame(daily.T)
+    col_list=list(daily.columns)
+    writer = pd.ExcelWriter(path, engine='xlsxwriter')
+    daily.T.to_excel(excel_writer=writer, sheet_name = 'Daily Sentiment Summary') 
+    worksheet = writer.sheets['Daily Sentiment Summary']                      
+    worksheet.set_column('B:B', 15)
+    writer.save()
+    
+    wb = load_workbook("pie.xlsx")
     for i in range(0, len(df.columns)):
+        
         ws = wb.create_sheet(tickers[i])
         score=1
 
@@ -152,7 +169,6 @@ def plot_sentiment(df):
             vals = []
             if index=='tickers':
                 continue
-            
             vals.append(df.loc[index, i])
             vals.insert(0,df.index[score])
             score=score+1
@@ -170,23 +186,21 @@ def plot_sentiment(df):
         manualLayout=ManualLayout(
         h=0.7, w=0.7,
         )
-)
+        )
         ws.add_chart(pie, "E3")
         
     
-    del wb["Sheet"]
     wb.save("pie.xlsx")
+    
+
 
 
 
 #List the tickers of the companies you'd like to analyze
-tickers=['AMZN', 'MSFT']              
-plot_sentiment(tally_scores(scored_news(tickers)))
-# print(tally_scores(scored_news(tickers)).T)
+#Amazon, Microsoft, and Google are used as examples
+tickers=['AMZN', 'MSFT', 'GOOG']      
+plot_sentiment(tickers)
 
-# plt.plot([1, 2, 3, 4])
-# plt.ylabel('some numbers')
-# plt.show()
 
 
 
